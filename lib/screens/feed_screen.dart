@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/post_model.dart';
+import '../services/post_service.dart';
+import '../services/auth_service.dart';
+import 'create_post_screen.dart';
+import 'post_detail_screen.dart';
+import 'user_profile_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({Key? key}) : super(key: key);
@@ -9,52 +14,15 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  late List<Post> posts;
+  final _postService = PostService();
+  final _authService = AuthService();
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedHashtag = '';
 
   @override
-  void initState() {
-    super.initState();
-    _initializePosts();
-  }
-
-  void _initializePosts() {
-    posts = [
-      Post(
-        id: '1',
-        author: PostUser(
-          id: '1',
-          name: 'Minh Anh',
-          avatar: 'https://via.placeholder.com/150?text=MinhAnh',
-          title: '2 giờ trước',
-          group: 'Cộng đồng Tiếng Anh',
-        ),
-        content: 'Mẹo học tiếng Anh hiệu quả cho người bạn rộn 📚',
-        hashtags: ['#HocTap', '#EnglishTips'],
-        imageUrl:
-            'https://via.placeholder.com/400x250?text=English+Learning',
-        likes: 124,
-        comments: 18,
-        createdAt: DateTime(2024, 5, 19, 14, 0),
-      ),
-      Post(
-        id: '2',
-        author: PostUser(
-          id: '2',
-          name: 'Hoàng Nam',
-          avatar: 'https://via.placeholder.com/150?text=HoangNam',
-          title: '5 giờ trước',
-          group: 'Khoa Học May Tính',
-        ),
-        content:
-            'Mới nghe sao về việc áp dụng AI vào quá trình viết code? Mình vừa tìm thấy một extension cực hữu ích giúp tăng năng suất đáng kể... 😊',
-        hashtags: ['#Coding', '#DevLife'],
-        imageUrl:
-            'https://via.placeholder.com/400x250?text=AI+Programming',
-        likes: 42,
-        comments: 5,
-        createdAt: DateTime(2024, 5, 19, 9, 0),
-      ),
-    ];
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,50 +44,133 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-      body: ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Bạn đang nghĩ gì thế?',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Create Post Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.grey.shade50,
+              child: Column(
                 children: [
-                  _buildActionButton(
-                    icon: Icons.image,
-                    label: 'Hình ảnh',
+                  // Input Field
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreatePostScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.grey.shade300,
+                            child: const Icon(
+                              Icons.person,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Bạn đang nghĩ gì thế?',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildActionButton(
-                    icon: Icons.video_library,
-                    label: 'Video',
-                  ),
-                  const SizedBox(width: 12),
-                  _buildActionButton(
-                    icon: Icons.calendar_today,
-                    label: 'Sự kiện',
+                  const SizedBox(height: 12),
+                  // Action Buttons
+                  Row(
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.image,
+                        label: 'Hình ảnh',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const CreatePostScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildActionButton(
+                        icon: Icons.video_library,
+                        label: 'Video',
+                        onTap: () {},
+                      ),
+                      const SizedBox(width: 12),
+                      _buildActionButton(
+                        icon: Icons.calendar_today,
+                        label: 'Sự kiện',
+                        onTap: () {},
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-          const Divider(height: 24),
-          ...posts.map((post) => _buildPostCard(post)),
-        ],
+            const SizedBox(height: 12),
+
+            // Feed
+            StreamBuilder<List<Post>>(
+              stream: _selectedHashtag.isEmpty
+                  ? _postService.getAllPosts()
+                  : _postService.getPostsByHashtag(_selectedHashtag),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: Text('Chưa có bài viết nào'),
+                    ),
+                  );
+                }
+
+                final posts = snapshot.data!;
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    return _buildPostCard(context, posts[index]);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,57 +178,94 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget _buildActionButton({
     required IconData icon,
     required String label,
+    required VoidCallback onTap,
   }) {
-    return OutlinedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon),
-      label: Text(label),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: Colors.grey),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildPostCard(Post post) {
+  Widget _buildPostCard(BuildContext context, Post post) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Author Info
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: NetworkImage(post.author.avatar),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserProfileScreen(
+                          userId: post.author.id,
+                          userName: post.author.name,
+                          userAvatar: post.author.avatar,
+                        ),
+                      ),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: NetworkImage(post.author.avatar),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.author.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      if (post.author.group != null)
-                        Text(
-                          post.author.group!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfileScreen(
+                            userId: post.author.id,
+                            userName: post.author.name,
+                            userAvatar: post.author.avatar,
                           ),
                         ),
-                      if (post.author.title != null)
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          post.author.title!,
+                          post.author.name,
                           style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
-                    ],
+                        if (post.author.group != null)
+                          Text(
+                            post.author.group!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 IconButton(
@@ -187,91 +275,92 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          // Content
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Hashtags
                 if (post.hashtags.isNotEmpty)
                   Wrap(
                     spacing: 8,
-                    children: post.hashtags
-                        .map(
-                          (tag) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              tag,
-                              style: TextStyle(
-                                color: Colors.green.shade600,
-                                fontSize: 12,
-                              ),
+                    children: post.hashtags.map((tag) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedHashtag = tag;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              color: Colors.green.shade600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        )
-                        .toList(),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                if (post.hashtags.isNotEmpty)
-                  const SizedBox(height: 8),
+                if (post.hashtags.isNotEmpty) const SizedBox(height: 8),
+                // Content text
                 Text(
                   post.content,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
+          // Image
           if (post.imageUrl != null) ...
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Image.network(
                 post.imageUrl!,
                 width: double.infinity,
-                height: 200,
+                height: 250,
                 fit: BoxFit.cover,
               ),
             ),
+          // Stats
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.favorite,
-                      color: Colors.red,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      post.likes.toString(),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+                Icon(
+                  Icons.favorite,
+                  color: Colors.red,
+                  size: 16,
                 ),
-                const SizedBox(width: 16),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.chat_bubble_outline,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      post.comments.toString(),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+                const SizedBox(width: 4),
+                Text(
+                  post.likes.toString(),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.chat_bubble_outline,
+                  color: Colors.grey,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  post.comments.toString(),
+                  style: const TextStyle(fontSize: 12),
                 ),
                 const Spacer(),
                 Text(
@@ -284,7 +373,74 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
           ),
-          const Divider(height: 0),
+          // Divider
+          Divider(
+            height: 0,
+            color: Colors.grey.shade300,
+          ),
+          // Action Buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final isLiked =
+                          await _postService.isPostLiked(post.id);
+                      if (isLiked) {
+                        await _postService.unlikePost(post.id);
+                      } else {
+                        await _postService.likePost(post.id);
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.favorite_border,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Thích',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              PostDetailScreen(post: post),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.chat_bubble_outline,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Bình luận',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.share,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Chia sẻ',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class PostUser {
   final String id;
   final String name;
@@ -22,7 +24,9 @@ class Post {
   final String? imageUrl;
   final int likes;
   final int comments;
+  final int shares;
   final DateTime createdAt;
+  final List<String> likedBy;
 
   Post({
     required this.id,
@@ -33,5 +37,7 @@ class Post {
     required this.likes,
     required this.comments,
     required this.createdAt,
+    this.likedBy = const [],
+    this.shares = 0,
   });
 }
