@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/message_model.dart';
+import '../services/chat_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final User user;
@@ -11,41 +12,37 @@ class ChatDetailScreen extends StatefulWidget {
 }
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
+  final _chatService = ChatService();
   late TextEditingController _messageController;
-  late List<Message> messages;
 
   @override
   void initState() {
     super.initState();
     _messageController = TextEditingController();
-    messages = [
-      Message(
-        id: '1',
-        content: 'Chào cậu, bài tập Toán hôm qua câu làm xong chưa?',
-        timestamp: DateTime(2024, 5, 19, 14, 20),
-        isFromMe: false,
-      ),
-      Message(
-        id: '2',
-        content:
-            'Chào Hà, tớ làm xong rồi. Cậu cần xem phần nào không?',
-        timestamp: DateTime(2024, 5, 19, 14, 22),
-        isFromMe: true,
-      ),
-      Message(
-        id: '3',
-        content:
-            'Cậu cho tớ xem phần tích phân nhé, tớ đang hơi chỗ đó.',
-        timestamp: DateTime(2024, 5, 19, 14, 23),
-        isFromMe: false,
-      ),
-    ];
+    // Đánh dấu tin nhắn là đã đọc
+    _chatService.markMessagesAsRead(widget.user.id);
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    try {
+      await _chatService.sendMessage(
+        recipientId: widget.user.id,
+        content: _messageController.text.trim(),
+      );
+      _messageController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e')),
+      );
+    }
   }
 
   @override
@@ -67,7 +64,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             Text(
-              widget.user.status,
+              widget.user.isOnline ? 'Đang hoạt động' : widget.user.status,
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -85,18 +82,52 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Center(
-                  child: Chip(
-                    label: const Text('Hôm nay'),
-                    backgroundColor: Colors.blue.shade100,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...messages.map((message) => _buildMessage(message)),
-              ],
+            child: StreamBuilder<List<Message>>(
+              stream: _chatService.getMessages(widget.user.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage:
+                              NetworkImage(widget.user.avatar),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Bắt đầu cuộc trò chuyện với ${widget.user.name}',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final messages = snapshot.data!;
+
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Center(
+                      child: Chip(
+                        label: const Text('Hôm nay'),
+                        backgroundColor: Colors.blue.shade100,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...messages.map((message) =>
+                        _buildMessage(message)),
+                  ],
+                );
+              },
             ),
           ),
           Container(
@@ -137,7 +168,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 const SizedBox(width: 8),
                 FloatingActionButton(
                   mini: true,
-                  onPressed: () {},
+                  onPressed: _sendMessage,
                   backgroundColor: Colors.blue.shade600,
                   child: const Icon(Icons.send),
                 ),
@@ -184,7 +215,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   child: Text(
                     message.content,
                     style: TextStyle(
-                      color: message.isFromMe ? Colors.white : Colors.black,
+                      color:
+                          message.isFromMe ? Colors.white : Colors.black,
                       fontSize: 14,
                     ),
                   ),

@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/messages_screen.dart';
+import 'screens/auth_screen.dart';
+import 'services/auth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -21,7 +29,22 @@ class MyApp extends StatelessWidget {
           seedColor: const Color(0xFF5B5EFF),
         ),
       ),
-      home: const MainScreen(),
+      home: StreamBuilder(
+        stream: AuthService().authStateChanges,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          if (snapshot.hasData && snapshot.data != null) {
+            return const MainScreen();
+          }
+          return const AuthScreen();
+        },
+      ),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -42,7 +65,7 @@ class _MainScreenState extends State<MainScreen> {
     const Scaffold(
       body: Center(child: Text('Explore')),
     ),
-    const FeedScreen(),
+    const MessagesScreen(),
     const Scaffold(
       body: Center(child: Text('Community')),
     ),

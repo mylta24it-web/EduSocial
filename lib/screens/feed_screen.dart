@@ -26,9 +26,9 @@ class _FeedScreenState extends State<FeedScreen> {
           name: 'Minh Anh',
           avatar: 'https://via.placeholder.com/150?text=MinhAnh',
           title: '2 giờ trước',
-          group: 'Công đồng Tiếng Anh',
+          group: 'Cộng đồng Tiếng Anh',
         ),
-        content: 'Mẹo học tiếng Anh hiệu quả cho người bận rộn 📚',
+        content: 'Mẹo học tiếng Anh hiệu quả cho người bạn rộn 📚',
         hashtags: ['#HocTap', '#EnglishTips'],
         imageUrl:
             'https://via.placeholder.com/400x250?text=English+Learning',
@@ -46,29 +46,13 @@ class _FeedScreenState extends State<FeedScreen> {
           group: 'Khoa Học May Tính',
         ),
         content:
-            'Mới nghe sao về việc áp dụng AI vào quá trình việt code? Mình vừa tìm thấy một extension cực hữu ích giúp tăng năng suất đáng kể... 😊',
+            'Mới nghe sao về việc áp dụng AI vào quá trình viết code? Mình vừa tìm thấy một extension cực hữu ích giúp tăng năng suất đáng kể... 😊',
         hashtags: ['#Coding', '#DevLife'],
         imageUrl:
             'https://via.placeholder.com/400x250?text=AI+Programming',
         likes: 42,
         comments: 5,
         createdAt: DateTime(2024, 5, 19, 9, 0),
-      ),
-      Post(
-        id: '3',
-        author: PostUser(
-          id: '3',
-          name: 'Ban Quản Trị',
-          avatar: 'https://via.placeholder.com/150?text=AdminTeam',
-          title: 'Thông báo',
-        ),
-        content: 'Workshop: Kỹ năng quản lý thời gian',
-        hashtags: [],
-        imageUrl:
-            'https://via.placeholder.com/400x250?text=Workshop',
-        likes: 0,
-        comments: 0,
-        createdAt: DateTime(2024, 5, 19, 8, 0),
       ),
     ];
   }
